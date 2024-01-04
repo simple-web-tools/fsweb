@@ -1,6 +1,6 @@
 # fsweb
 
-This project takes a directory of html files and creates index pages so it can be browsed like a directory.
+This project takes a directory of regular files and creates index pages so it can be browsed like a directory.
 
 ## why
 

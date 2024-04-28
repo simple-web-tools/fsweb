@@ -9,6 +9,8 @@ def create_argparser_and_get_args():
 
     parser.add_argument("--base-dir", help="the base directory which fast-html will recursively operate on, path is relative to the fast-html directory")
     parser.add_argument("--gen-dir", help="the directory that fast-html will output the modified files, path is relative to the fast-html directory")
+    parser.add_argument("--theme", choices=['light', 'dark'], help="choose from 'dark' or 'light' themes")
+    parser.add_argument("--wrapper", action='store_true', help="add wrapper to every index file")
 
     args = parser.parse_args()
     return args
@@ -46,7 +48,7 @@ def create_html_list_from_html_files(files):
 \t</ul>
     """
 
-def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List[str], html_files: List[str]):
+def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List[str], html_files: List[str], theme: str, wrapper: bool):
 
     dir_name = get_end_of_path(dir_path)
     if len(sub_dir_names) == 0:
@@ -66,11 +68,14 @@ def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List
 <head>
     <meta charset="UTF-8">
     <title>{dir_name}</title>
+    {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
 </head>
 <body>
+    {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
     <h1>{("root: " if first_iteration else "") + dir_name}</h1>
 {html_dir_content}
 {html_file_content}
+    {"</div>" if wrapper else ""}
 </body>
 </html>
     """
@@ -82,7 +87,7 @@ def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List
     f.write(index_page_body)
     f.close()
 
-def create_index_files(generated_directory):
+def create_index_files(generated_directory, theme: str, wrapper: bool):
     first_iteration = True
     for dir_path, sub_dir_names, file_names in walk(generated_directory):
         print(f"\n==== starting work on {dir_path} ====")
@@ -95,7 +100,7 @@ def create_index_files(generated_directory):
                 html_files.append(relative_file_path)
 
         print(f"~~~> generating index file with links to dirs: {sub_dir_names}, and files: {html_files}")
-        create_index_file(dir_path, first_iteration, sub_dir_names, html_files)
+        create_index_file(dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper)
 
         first_iteration = False
         print(f"==== done with {dir_path} ====\n")
@@ -108,6 +113,15 @@ if __name__ == "__main__":
     if args.base_dir and args.gen_dir: # good this is valid
         script_directory = os.path.dirname(os.path.realpath(__file__))
         re_create_generated_directory(args.base_dir, args.gen_dir)
-        create_index_files(args.gen_dir)
+
+        theme = 'light'
+        if args.theme:
+            theme = args.theme
+
+        wrapper = False
+        if args.wrapper:
+            wrapper = True
+
+        create_index_files(args.gen_dir, theme, wrapper)
     else:
         print("Error: You must specify base-dir, gen-dir")

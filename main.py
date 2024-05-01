@@ -48,7 +48,7 @@ def create_html_list_from_html_files(files):
 \t</ul>
     """
 
-def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List[str], html_files: List[str], theme: str, wrapper: bool):
+def create_index_file(dir_path: str, in_root_dir : bool, sub_dir_names: List[str], html_files: List[str], theme: str, wrapper: bool):
 
     dir_name = get_end_of_path(dir_path)
     if len(sub_dir_names) == 0:
@@ -72,7 +72,7 @@ def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List
 </head>
 <body>
     {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
-    <h1>{("root: " if first_iteration else "") + dir_name}</h1>
+    <h1>{("root: " if in_root_dir else "") + dir_name}</h1>
 {html_dir_content}
 {html_file_content}
     {"</div>" if wrapper else ""}
@@ -80,7 +80,14 @@ def create_index_file(dir_path: str, first_iteration : bool, sub_dir_names: List
 </html>
     """
 
-    index_file_path = dir_path + "/generated_index.html"
+
+    index_file_path = None
+    if in_root_dir:
+        index_file_path = dir_path + "/index.html"    
+    else:
+        index_file_path = dir_path + "/generated_index.html"
+
+    assert(index_file_path is not None)
 
 
     f = open(index_file_path, "w")

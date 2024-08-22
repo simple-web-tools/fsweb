@@ -5,26 +5,57 @@ from os import walk
 from typing import List, Tuple
 import configparser
 
-def create_argparser_and_get_args():
-    parser = argparse.ArgumentParser(prog="fsweb", description="Create a browsable website from a series of scattered HTML files", epilog="Visit www.cuppajoeman.com for more information")
 
-    parser.add_argument("--base-dir", help="The base directory which fsweb will recursively operate on, path is relative to the fsweb directory", required=True)
-    parser.add_argument("--gen-dir", help="The directory that fsweb will output the modified files, path is relative to the fsweb directory", required=True)
-    parser.add_argument("--theme", choices=['light', 'dark'], help="Choose from 'dark' or 'light' themes")
-    parser.add_argument("--wrapper", action='store_true', help="Add wrapper to every index file")
-    
-    parser.add_argument("--ini-layout", action='store_true', help="Show the layout of the fsweb_dir.ini file and exit")
+def create_argparser_and_get_args():
+    parser = argparse.ArgumentParser(
+        prog="fsweb",
+        description="Create a browsable website from a series of scattered HTML files",
+        epilog="Visit www.cuppajoeman.com for more information",
+    )
+
+    parser.add_argument(
+        "--base-dir",
+        help="The base directory which fsweb will recursively operate on, path is relative to the fsweb directory",
+        required=True,
+    )
+    parser.add_argument(
+        "--gen-dir",
+        help="The directory that fsweb will output the modified files, path is relative to the fsweb directory",
+        required=True,
+    )
+    parser.add_argument(
+        "--theme",
+        choices=["light", "dark"],
+        help="Choose from 'dark' or 'light' themes",
+    )
+    parser.add_argument(
+        "--wrapper", action="store_true", help="Add wrapper to every index file"
+    )
+
+    parser.add_argument(
+        "--search",
+        action="store_true",
+        help="Add search functionality initiated by ctrl-space",
+    )
+
+    parser.add_argument(
+        "--ini-layout",
+        action="store_true",
+        help="Show the layout of the fsweb_dir.ini file and exit",
+    )
 
     args = parser.parse_args()
-    
+
     if args.ini_layout:
         print_ini_layout()
         exit(0)
-        
+
     return args
 
+
 def print_ini_layout():
-    print("""
+    print(
+        """
     Layout of fsweb_dir.ini:
     
     [settings]
@@ -33,37 +64,52 @@ def print_ini_layout():
     
     - ignore_files: A comma-separated list of file names to ignore in this directory.
     - ignore_directories: A comma-separated list of directory names to ignore in this directory.
-    """)
+    """
+    )
+
 
 def re_create_generated_directory(content_directory, generated_directory):
     if os.path.exists(generated_directory):
         shutil.rmtree(generated_directory)
     shutil.copytree(content_directory, generated_directory)
 
+
 def get_end_of_path(path):
     return os.path.basename(os.path.normpath(path))
+
 
 def load_fsweb_dir_ini(dir_path: str) -> Tuple[List[str], List[str]]:
     """Load the fsweb_dir.ini file if it exists and return lists of ignored files and directories."""
     config = configparser.ConfigParser()
-    ini_file_path = os.path.join(dir_path, 'fsweb_dir.ini')
-    
+    ini_file_path = os.path.join(dir_path, "fsweb_dir.ini")
+
     ignored_files = []
     ignored_directories = []
-    
+
     if os.path.exists(ini_file_path):
         config.read(ini_file_path)
-        
-        if 'settings' in config:
-            ignored_files = [f.strip() for f in config['settings'].get('ignore_files', '').split(',') if f.strip()]
-            ignored_directories = [d.strip() for d in config['settings'].get('ignore_directories', '').split(',') if d.strip()]
-    
+
+        if "settings" in config:
+            ignored_files = [
+                f.strip()
+                for f in config["settings"].get("ignore_files", "").split(",")
+                if f.strip()
+            ]
+            ignored_directories = [
+                d.strip()
+                for d in config["settings"].get("ignore_directories", "").split(",")
+                if d.strip()
+            ]
+
     return ignored_files, ignored_directories
+
 
 def create_html_list_from_directories(directories):
     inner = ""
     for directory in directories:
-        inner += f"\t\t<li><a href='{directory}/generated_index.html'>{directory}</a></li>\n"
+        inner += (
+            f"\t\t<li><a href='{directory}/generated_index.html'>{directory}</a></li>\n"
+        )
 
     inner = inner[:-1]  # remove ending new line
 
@@ -71,6 +117,7 @@ def create_html_list_from_directories(directories):
 {inner}
 \t</ul>
 """
+
 
 def create_html_list_from_html_files(files):
     inner = ""
@@ -84,7 +131,44 @@ def create_html_list_from_html_files(files):
 \t</ul>
     """
 
-def create_index_file(dir_path: str, in_root_dir: bool, sub_dir_names: List[str], html_files: List[str], theme: str, wrapper: bool):
+
+body_search_content = """
+<div id="searchModal" class="modal">
+   <div class="modal-content">
+       <input type="text" id="searchInput" placeholder="Search...">
+       <ul id="results"></ul>
+   </div>
+</div>
+
+
+<script src="/search/fuzzysort.js"></script>
+<script src="/search/search_callbacks.js"></script>
+<script src="/search/search_list.js"></script>
+<script src="/search/search.js"></script>
+"""
+
+
+def get_head_search_content(theme):
+    return f"""
+   {'<link id="theme-stylesheet" rel="stylesheet" href="/search/dark_theme.css">' 
+        if theme == 'dark' and search else ''}
+
+   {'<link id="theme-stylesheet" rel="stylesheet" href="/search/dark_theme.css">' 
+        if theme == 'light' and search else ''}
+
+    {'<link rel="stylesheet" href="/search/search.css">' if search else ''}
+    """
+
+
+def create_index_file(
+    dir_path: str,
+    in_root_dir: bool,
+    sub_dir_names: List[str],
+    html_files: List[str],
+    theme: str,
+    wrapper: bool,
+    search: bool,
+):
 
     dir_name = get_end_of_path(dir_path)
     if len(sub_dir_names) == 0:
@@ -105,6 +189,7 @@ def create_index_file(dir_path: str, in_root_dir: bool, sub_dir_names: List[str]
     <meta charset="UTF-8">
     <title>{dir_name}</title>
     {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
+    {get_head_search_content(theme) if search else ''}
 </head>
 <body>
     {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
@@ -112,16 +197,48 @@ def create_index_file(dir_path: str, in_root_dir: bool, sub_dir_names: List[str]
 {html_dir_content}
 {html_file_content}
     {"</div>" if wrapper else ""}
+    {body_search_content if search else ''}
 </body>
 </html>
     """
 
-    index_file_path = os.path.join(dir_path, "index.html" if in_root_dir else "generated_index.html")
-    
+    index_file_path = os.path.join(
+        dir_path, "index.html" if in_root_dir else "generated_index.html"
+    )
+
     with open(index_file_path, "w") as f:
         f.write(index_page_body)
 
-def create_index_files(generated_directory, theme: str, wrapper: bool):
+
+def add_text_to_html(html_file_path, head_text, body_text):
+    # Read the content of the HTML file
+    with open(html_file_path, "r", encoding="utf-8") as file:
+        html_content = file.read()
+
+    # Find the closing head tag and insert the head_text before it
+    head_index = html_content.find("</head>")
+    if head_index != -1:
+        html_content = (
+            html_content[:head_index] + head_text + "\n" + html_content[head_index:]
+        )
+
+    # Find the closing body tag and insert the body_text before it
+    body_index = html_content.find("</body>")
+    if body_index != -1:
+        html_content = (
+            html_content[:body_index] + body_text + "\n" + html_content[body_index:]
+        )
+
+    # Write the modified content back to the HTML file
+    with open(html_file_path, "w", encoding="utf-8") as file:
+        file.write(html_content)
+
+
+def create_index_files(generated_directory, theme: str, wrapper: bool, search: bool):
+
+    if search:
+        shutil.copytree("search", generated_directory + "/search")
+
     first_iteration = True
     for dir_path, sub_dir_names, file_names in walk(generated_directory):
         print(f"\n==== Starting work on {dir_path} ====")
@@ -130,13 +247,58 @@ def create_index_files(generated_directory, theme: str, wrapper: bool):
 
         # Filter out ignored directories and files
         sub_dir_names[:] = [d for d in sub_dir_names if d not in ignored_directories]
-        html_files = [f for f in file_names if f.endswith(".html") and f not in ignored_files]
+        html_files = [
+            f for f in file_names if f.endswith(".html") and f not in ignored_files
+        ]
 
-        print(f"~~~> Generating index file with links to dirs: {sub_dir_names}, and files: {html_files}")
-        create_index_file(dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper)
+        if search:
+            print("~~~> Modifying html files to include search functionality")
+            for html_file in html_files:
+
+                html_file_path = os.path.join(dir_path, html_file)
+                add_text_to_html(
+                    html_file_path, get_head_search_content(theme), body_search_content
+                )
+
+        print(
+            f"~~~> Generating index file with links to dirs: {sub_dir_names}, and files: {html_files}"
+        )
+
+        create_index_file(
+            dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper, search
+        )
 
         first_iteration = False
         print(f"==== Done with {dir_path} ====\n")
+
+
+def generate_search_list_file(generated_dir):
+    """
+    generates list of files to be searched by the search feature
+    todo: need to handle dirs as well, just doing files
+    """
+
+    print("generating search list")
+    file_list = []
+    for root, dirs, files in os.walk(generated_dir):
+
+        ignored_files, ignored_directories = load_fsweb_dir_ini(root)
+
+        html_files = [
+            f for f in files if f.endswith(".html") and f not in ignored_files
+        ]
+        for html_file in html_files:
+            relative_path = os.path.relpath(os.path.join(root, html_file), generated_dir)
+            file_list.append(
+                relative_path.replace("\\", "/")
+            )  # Replace backslashes with forward slashes for JS compatibility
+
+    with open(generated_dir + "/search/search_list.js", "w") as f:
+        f.write("const search_list = [\n")
+        for file in file_list:
+            f.write(f'    "{file}",\n')
+        f.write("];\n")
+
 
 if __name__ == "__main__":
 
@@ -146,9 +308,14 @@ if __name__ == "__main__":
         script_directory = os.path.dirname(os.path.realpath(__file__))
         re_create_generated_directory(args.base_dir, args.gen_dir)
 
-        theme = args.theme if args.theme else 'light'
+        theme = args.theme if args.theme else "light"
         wrapper = args.wrapper
+        search = args.search
 
-        create_index_files(args.gen_dir, theme, wrapper)
+        create_index_files(args.gen_dir, theme, wrapper, search)
+
+        if search:
+            generate_search_list_file(args.gen_dir)
+
     else:
         print("Error: You must specify --base-dir and --gen-dir")

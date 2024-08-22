@@ -1,0 +1,11 @@
+/* dark_theme.css */
+:root {
+    --modal-background: rgba(0, 0, 0, 0.8);
+    --modal-content-background: #444;
+    --input-background: #555;
+    --input-text-color: #fff;
+    --result-background: #666;
+    --result-hover-background: #777;
+    --selected-background: #888;
+    --border-color: #555;
+}

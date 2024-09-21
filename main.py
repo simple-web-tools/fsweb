@@ -39,6 +39,12 @@ def create_argparser_and_get_args():
     )
 
     parser.add_argument(
+        "--breadcrumb",
+        action="store_true",
+        help="Add breadcrumb navigation to every index file",
+    )
+
+    parser.add_argument(
         "--ini-layout",
         action="store_true",
         help="Show the layout of the fsweb_dir.ini file and exit",
@@ -108,7 +114,7 @@ def create_html_list_from_directories(directories):
     inner = ""
     for directory in directories:
         inner += (
-            f"\t\t<li><a href='{directory}/generated_index.html'>{directory}</a></li>\n"
+            f"\t\t<li><a href='{directory}/index.html'>{directory}</a></li>\n"
         )
 
     inner = inner[:-1]  # remove ending new line
@@ -160,7 +166,33 @@ def get_head_search_content(theme):
     """
 
 
+def generate_breadcrumb(rel_path):
+    path_parts = rel_path.split(os.sep)  # Split the path by directory separator
+    breadcrumb = '<nav class="breadcrumb">\n<a href="/index.html">~</a>'
+
+    # Iterate through path parts and generate links
+    full_path = ""
+    for part in path_parts:
+        if part:  # Avoid empty parts
+            full_path = os.path.join(full_path, part)
+            breadcrumb += f'/<a href="/{full_path}/index.html">{part}</a>'
+
+    breadcrumb += '\n</nav>'
+    return breadcrumb
+
+def strip_gen_dir(dir_path, gen_dir):
+    """
+    Strips out the 'gen_dir' part of the path and returns the subpath starting from the point after 'gen_dir'.
+    """
+    if gen_dir in dir_path:
+        # Split at 'gen_dir' and take the part after it
+        dir_path = dir_path.split(gen_dir, 1)[-1]
+        if dir_path.startswith(os.sep):  # Remove leading slash if present
+            dir_path = dir_path[1:]
+    return dir_path
+
 def create_index_file(
+    gen_dir: str,
     dir_path: str,
     in_root_dir: bool,
     sub_dir_names: List[str],
@@ -168,9 +200,22 @@ def create_index_file(
     theme: str,
     wrapper: bool,
     search: bool,
+    breadcrumb: bool
 ):
 
-    dir_name = get_end_of_path(dir_path)
+
+
+    dir_name = get_end_of_path(strip_gen_dir(dir_path, gen_dir))
+
+    print(f"DEBOGG {dir_path} bred {strip_gen_dir(dir_path, gen_dir)}")
+
+
+  # Add breadcrumbs if enabled
+    breadcrumb_content = ""
+    if breadcrumb and not in_root_dir:
+        breadcrumb_content = generate_breadcrumb(strip_gen_dir(dir_path, gen_dir))
+
+
     if len(sub_dir_names) == 0:
         html_dir_content = ""
     else:
@@ -193,6 +238,7 @@ def create_index_file(
 </head>
 <body>
     {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
+    {breadcrumb_content}
     <h1>{("root: " if in_root_dir else "") + dir_name}</h1>
 {html_dir_content}
 {html_file_content}
@@ -203,7 +249,7 @@ def create_index_file(
     """
 
     index_file_path = os.path.join(
-        dir_path, "index.html" if in_root_dir else "generated_index.html"
+        dir_path, "index.html" 
     )
 
     with open(index_file_path, "w") as f:
@@ -234,7 +280,7 @@ def add_text_to_html(html_file_path, head_text, body_text):
         file.write(html_content)
 
 
-def create_index_files(generated_directory, theme: str, wrapper: bool, search: bool):
+def create_index_files(generated_directory, theme: str, wrapper: bool, search: bool, breadcrumb: bool):
 
     if search:
         shutil.copytree("search", generated_directory + "/search")
@@ -265,7 +311,8 @@ def create_index_files(generated_directory, theme: str, wrapper: bool, search: b
         )
 
         create_index_file(
-            dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper, search
+            generated_directory,
+            dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper, search, breadcrumb
         )
 
         first_iteration = False
@@ -311,8 +358,9 @@ if __name__ == "__main__":
         theme = args.theme if args.theme else "light"
         wrapper = args.wrapper
         search = args.search
+        breadcrumb = args.breadcrumb
 
-        create_index_files(args.gen_dir, theme, wrapper, search)
+        create_index_files(args.gen_dir, theme, wrapper, search, breadcrumb)
 
         if search:
             generate_search_list_file(args.gen_dir)

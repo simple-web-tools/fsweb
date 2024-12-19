@@ -1,0 +1,10 @@
+/* for the autoscroller (middle mouse activated) */
+.autoscroll-arrow {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  width: 4px;
+  background-color: black;
+  display: none;
+}

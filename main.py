@@ -143,12 +143,26 @@ def strip_output_dir(dir_path: str, output_dir: str) -> str:
             dir_path = dir_path[1:]
     return dir_path
 
+def create_list_of_links_for_each_non_html_file(files: List[str]) -> str:
+    """Create HTML links for non-HTML files."""
+    inner = ""
+    for file in files:
+        inner += f"\t\t<li><a href='{file}'>{file}</a></li>\n"
+
+    inner = inner[:-1]  # remove ending new line
+
+    return f"""\t<ul>
+{inner}
+\t</ul>
+    """
+
 def create_index_file(
     output_dir: str,
     curr_output_dir_path: str,
     in_root_dir: bool,
     sub_dir_names: List[str],
     html_files: List[str],
+    non_html_files: List[str],
     theme: str,
     wrapper: bool,
     search: bool,
@@ -186,6 +200,12 @@ def create_index_file(
         if html_files else ""
     )
 
+    non_html_file_content = (
+        f"""	<h2>other files</h2>
+{create_list_of_links_for_each_non_html_file(non_html_files)}"""
+        if non_html_files else ""
+    )
+
     header_content = f"""
     <title>{dir_name}</title>
     {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
@@ -198,6 +218,7 @@ def create_index_file(
     <h1>{("root: " if in_root_dir else "") + dir_name}</h1>
 {html_dir_content}
 {html_file_content}
+{non_html_file_content}
     {"</div>" if wrapper else ""}
     {body_search_content if search else ''}
 """
@@ -293,6 +314,11 @@ def create_index_files(
             if f.endswith(".html") and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
 
+        non_html_files = [
+            f for f in file_names 
+            if not f.endswith(".html") and not any(re.match(pattern, f) for pattern in ignored_files)
+        ]
+
         if search:
             print("~~~> Modifying html files to include search functionality")
             for html_file in html_files:
@@ -302,12 +328,12 @@ def create_index_files(
                 )
 
         print(
-            f"~~~> Generating index file with links to dirs: {sub_dir_names}, and files: {html_files}"
+            f"~~~> Generating index file with links to dirs: {sub_dir_names}, html files: {html_files}, and other files: {non_html_files}"
         )
 
         create_index_file(
             output_dir,
-            output_dir_path, first_iteration, sub_dir_names, html_files, theme, wrapper, search, breadcrumb, clobber_index_files, use_existing_index_files, merge_existing_index_files
+            output_dir_path, first_iteration, sub_dir_names, html_files, non_html_files, theme, wrapper, search, breadcrumb, clobber_index_files, use_existing_index_files, merge_existing_index_files
         )
 
         first_iteration = False

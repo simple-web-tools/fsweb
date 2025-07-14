@@ -397,7 +397,7 @@ def create_argparser_and_get_args():
         "-ifm",
         "--index-file-mode",
         choices=["use", "clobber", "merge"],
-        required=True,
+        default="use",
         help=(
             "Specify the mode for handling index files: "
             "'use' to use existing index files, "

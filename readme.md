@@ -4,7 +4,7 @@ Are you tired of manually adding html files to pages via links? This project is 
 
 <img width="715" height="573" alt="image" src="https://github.com/user-attachments/assets/a8b75fdd-9b65-46f6-ad26-990d3ba75762" />
 
-The above is an example of how it can be used, note that it has custom styling by default this project doesn't impose any styling.
+The above is an example of how it can be used, note that the example uses has custom styling but by default this project doesn't impose any styling.
 
 ## how
 

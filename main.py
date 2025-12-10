@@ -3,7 +3,7 @@ import shutil
 import os
 import re
 from os import walk
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import configparser
 from html_utils.main import extract_body_content, extract_header_content
 from fs_utils.main import get_absolute_path_of_where_this_script_exists
@@ -171,6 +171,7 @@ def create_index_file(
     clobber_index_files: bool,
     use_existing_index_files: bool,
     merge_existing_index_files: bool,
+    css_file_path: Optional[str],
 ):
     BLANK_HTML_FILE = """<!DOCTYPE html>
 <html lang="en">
@@ -216,6 +217,8 @@ def create_index_file(
     <title>{dir_name}</title>
     {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
     {generate_links_for_header(theme) if search else ''}
+    {f'<link rel="stylesheet" href="{css_file_path}">' if css_file_path else ""}
+            
 """
     body_content = f"""
     <article>
@@ -304,6 +307,7 @@ def create_index_files(
     clobber_index_files: bool,
     use_existing_index_files: bool,
     merge_existing_index_files: bool,
+    css_file_path: Optional[str],
 ) -> None:
 
     if search:
@@ -363,6 +367,7 @@ def create_index_files(
             clobber_index_files,
             use_existing_index_files,
             merge_existing_index_files,
+            css_file_path,
         )
 
         first_iteration = False
@@ -453,6 +458,12 @@ def create_argparser_and_get_args():
     )
 
     parser.add_argument(
+        "-css",
+        "--css-file-path",
+        help="Specify the absolute value to a css file relative to the generated directory root to apply to generated index files",
+    )
+
+    parser.add_argument(
         "-b",
         "--breadcrumb",
         action="store_true",
@@ -477,6 +488,7 @@ def create_argparser_and_get_args():
 
 if __name__ == "__main__":
 
+    print("goooobing")
     args = create_argparser_and_get_args()
 
     if args.source_dir and args.output_dir:
@@ -491,6 +503,9 @@ if __name__ == "__main__":
         use_existing_index_files = args.index_file_mode == "use"
         merge_existing_index_files = args.index_file_mode == "merge"
 
+        css_file_path: Optional[str] = args.css_file_path
+        print("goobasn: ", css_file_path)
+
         create_index_files(
             args.output_dir,
             theme,
@@ -500,6 +515,7 @@ if __name__ == "__main__":
             clobber_index_files,
             use_existing_index_files,
             merge_existing_index_files,
+            css_file_path,
         )
 
         if search:

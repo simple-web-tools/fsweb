@@ -10,6 +10,7 @@ from fs_utils.main import get_absolute_path_of_where_this_script_exists
 
 SCRIPT_DIR = get_absolute_path_of_where_this_script_exists()
 
+
 def print_ini_layout():
     print(
         """
@@ -64,9 +65,7 @@ def load_fsweb_dir_ini(dir_path: str) -> Tuple[List[str], List[str]]:
 def create_list_of_links_for_each_directory(directories: List[str]) -> str:
     inner = ""
     for directory in directories:
-        inner += (
-            f"\t\t<li><a href='{directory}/index.html'>{directory}</a></li>\n"
-        )
+        inner += f"\t\t<li><a href='{directory}/index.html'>{directory}</a></li>\n"
 
     inner = inner[:-1]  # remove ending new line
 
@@ -76,7 +75,7 @@ def create_list_of_links_for_each_directory(directories: List[str]) -> str:
 """
 
 
-def create_list_of_links_for_each_html_file(files : List[str]) -> str:
+def create_list_of_links_for_each_html_file(files: List[str]) -> str:
     inner = ""
     for file in files:
         inner += f"\t\t<li><a href='{file}'>{file[:-5]}</a></li>\n"
@@ -87,7 +86,6 @@ def create_list_of_links_for_each_html_file(files : List[str]) -> str:
 {inner}
 \t</ul>
     """
-
 
 
 body_search_content = """
@@ -106,7 +104,7 @@ body_search_content = """
 """
 
 
-def generate_links_for_header(theme :str) -> str:
+def generate_links_for_header(theme: str) -> str:
     return f"""
    {'<link id="theme-stylesheet" rel="stylesheet" href="/search/dark_theme.css">' 
         if theme == 'dark' and search else ''}
@@ -129,8 +127,9 @@ def generate_html_for_breadcrumb(rel_path: str) -> str:
             full_path = os.path.join(full_path, part)
             breadcrumb += f'/<a href="/{full_path}/index.html">{part}</a>'
 
-    breadcrumb += '\n</nav>'
+    breadcrumb += "\n</nav>"
     return breadcrumb
+
 
 def strip_output_dir(dir_path: str, output_dir: str) -> str:
     """
@@ -142,6 +141,7 @@ def strip_output_dir(dir_path: str, output_dir: str) -> str:
         if dir_path.startswith(os.sep):  # Remove leading slash if present
             dir_path = dir_path[1:]
     return dir_path
+
 
 def create_list_of_links_for_each_non_html_file(files: List[str]) -> str:
     """Create HTML links for non-HTML files."""
@@ -156,6 +156,7 @@ def create_list_of_links_for_each_non_html_file(files: List[str]) -> str:
 \t</ul>
     """
 
+
 def create_index_file(
     output_dir: str,
     curr_output_dir_path: str,
@@ -169,7 +170,7 @@ def create_index_file(
     breadcrumb: bool,
     clobber_index_files: bool,
     use_existing_index_files: bool,
-    merge_existing_index_files: bool
+    merge_existing_index_files: bool,
 ):
     BLANK_HTML_FILE = """<!DOCTYPE html>
 <html lang="en">
@@ -186,24 +187,29 @@ def create_index_file(
 
     breadcrumb_content = ""
     if breadcrumb and not in_root_dir:
-        breadcrumb_content = generate_html_for_breadcrumb(strip_output_dir(curr_output_dir_path, output_dir))
+        breadcrumb_content = generate_html_for_breadcrumb(
+            strip_output_dir(curr_output_dir_path, output_dir)
+        )
 
     html_dir_content = (
         f"""	<h2>directories</h2>
 {create_list_of_links_for_each_directory(sub_dir_names)}"""
-        if sub_dir_names else ""
+        if sub_dir_names
+        else ""
     )
 
     html_file_content = (
         f"""	<h2>files</h2>
 {create_list_of_links_for_each_html_file(html_files)}"""
-        if html_files else ""
+        if html_files
+        else ""
     )
 
     non_html_file_content = (
         f"""	<h2>other files</h2>
 {create_list_of_links_for_each_non_html_file(non_html_files)}"""
-        if non_html_files else ""
+        if non_html_files
+        else ""
     )
 
     header_content = f"""
@@ -211,73 +217,78 @@ def create_index_file(
     {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
     {generate_links_for_header(theme) if search else ''}
 """
-
     body_content = f"""
-    {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
-    {breadcrumb_content}
-    <h1>{("root: " if in_root_dir else "") + dir_name}</h1>
-{html_dir_content}
-{html_file_content}
-{non_html_file_content}
-    {"</div>" if wrapper else ""}
-    {body_search_content if search else ''}
-"""
+    <article>
+        {"<div style='width: 70%; margin: 0 auto;'>" if wrapper else ""}
+        {breadcrumb_content}
+        <header>
+            <h1>{("~" if in_root_dir else dir_name) }</h1>
+        </header>
+        {html_dir_content}
+        {html_file_content}
+        {non_html_file_content}
+        {"</div>" if wrapper else ""}
+        {body_search_content if search else ''}
+    </article>"""
 
     output_index_file_path = os.path.join(curr_output_dir_path, "index.html")
     output_index_exists = os.path.exists(output_index_file_path)
 
     if output_index_exists:
         if clobber_index_files:
-            # Write the blank HTML file as the initial content
+            # write the blank html file as the initial content
             with open(output_index_file_path, "w", encoding="utf-8") as file:
                 file.write(BLANK_HTML_FILE)
-            add_text_to_header_and_body_of_html(output_index_file_path, header_content, body_content)
+            add_text_to_header_and_body_of_html(
+                output_index_file_path, header_content, body_content
+            )
 
         if merge_existing_index_files:
-            print("bloogas", output_index_file_path)
-            # Merge content from existing file
-            with open(output_index_file_path, "r", encoding="utf-8") as file:
-                existing_content = file.read()
-            existing_body = extract_body_content(existing_content)
-            existing_header = extract_header_content(existing_content)
-            print("existing_body")
-            print(existing_body)
-            print("existing_header")
-            print(existing_header)
-            header_content = existing_header + "\n" + header_content
-            body_content = existing_body + "\n" + body_content
-
-            # Write the merged content back to the file
-            with open(output_index_file_path, "w", encoding="utf-8") as file:
-                file.write(BLANK_HTML_FILE)
-            add_text_to_header_and_body_of_html(output_index_file_path, header_content, body_content)
+            body_content = "<hr>" + body_content
+            add_text_to_header_and_body_of_html(
+                output_index_file_path, header_content, body_content
+            )
 
         if use_existing_index_files:
-            pass # by default if none of the above are true, then the default behavior is to leave existing index files
+            pass  # by default if none of the above are true, then the default behavior is to leave existing index files
 
     else:
         # Write the blank HTML file as the initial content
         with open(output_index_file_path, "w", encoding="utf-8") as file:
             file.write(BLANK_HTML_FILE)
-        add_text_to_header_and_body_of_html(output_index_file_path, header_content, body_content)
+        add_text_to_header_and_body_of_html(
+            output_index_file_path, header_content, body_content
+        )
 
 
-def add_text_to_header_and_body_of_html(html_file_path :str, head_text: str, body_text: str) -> None:
+def add_text_to_header_and_body_of_html(
+    html_file_path: str, head_text: str, body_text: str
+) -> None:
+    """
+    Inserts head_text before </head> and body_text before </body> or above <footer> if it exists.
+    """
     with open(html_file_path, "r", encoding="utf-8") as file:
         html_content = file.read()
 
-    # find the closing head tag and insert the head_text before it
+    # Insert head_text before </head>
     head_index = html_content.find("</head>")
     if head_index != -1:
         html_content = (
             html_content[:head_index] + head_text + "\n" + html_content[head_index:]
         )
 
-    # find the closing body tag and insert the body_text before it
-    body_index = html_content.find("</body>")
-    if body_index != -1:
+    # Determine where to insert body_text
+    footer_index = html_content.find("<footer>")
+    if footer_index != -1:
+        print("found footer")
+        insert_index = footer_index
+    else:
+        print("didn't found footer")
+        insert_index = html_content.find("</body>")
+
+    if insert_index != -1:
         html_content = (
-            html_content[:body_index] + body_text + "\n" + html_content[body_index:]
+            html_content[:insert_index] + body_text + "\n" + html_content[insert_index:]
         )
 
     with open(html_file_path, "w", encoding="utf-8") as file:
@@ -285,14 +296,14 @@ def add_text_to_header_and_body_of_html(html_file_path :str, head_text: str, bod
 
 
 def create_index_files(
-    output_dir: str, 
-    theme: str, 
-    wrapper: bool, 
-    search: bool, 
-    breadcrumb: bool, 
+    output_dir: str,
+    theme: str,
+    wrapper: bool,
+    search: bool,
+    breadcrumb: bool,
     clobber_index_files: bool,
     use_existing_index_files: bool,
-    merge_existing_index_files: bool
+    merge_existing_index_files: bool,
 ) -> None:
 
     if search:
@@ -305,18 +316,23 @@ def create_index_files(
         ignored_files, ignored_directories = load_fsweb_dir_ini(output_dir_path)
 
         sub_dir_names[:] = [
-            d for d in sub_dir_names 
+            d
+            for d in sub_dir_names
             if not any(re.match(pattern, d) for pattern in ignored_directories)
         ]
 
         html_files = [
-            f for f in file_names 
-            if f.endswith(".html") and not any(re.match(pattern, f) for pattern in ignored_files)
+            f
+            for f in file_names
+            if f.endswith(".html")
+            and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
 
         non_html_files = [
-            f for f in file_names 
-            if not f.endswith(".html") and not any(re.match(pattern, f) for pattern in ignored_files)
+            f
+            for f in file_names
+            if not f.endswith(".html")
+            and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
 
         if search:
@@ -324,7 +340,9 @@ def create_index_files(
             for html_file in html_files:
                 html_file_path = os.path.join(output_dir_path, html_file)
                 add_text_to_header_and_body_of_html(
-                    html_file_path, generate_links_for_header(theme), body_search_content
+                    html_file_path,
+                    generate_links_for_header(theme),
+                    body_search_content,
                 )
 
         print(
@@ -333,7 +351,18 @@ def create_index_files(
 
         create_index_file(
             output_dir,
-            output_dir_path, first_iteration, sub_dir_names, html_files, non_html_files, theme, wrapper, search, breadcrumb, clobber_index_files, use_existing_index_files, merge_existing_index_files
+            output_dir_path,
+            first_iteration,
+            sub_dir_names,
+            html_files,
+            non_html_files,
+            theme,
+            wrapper,
+            search,
+            breadcrumb,
+            clobber_index_files,
+            use_existing_index_files,
+            merge_existing_index_files,
         )
 
         first_iteration = False
@@ -353,11 +382,15 @@ def generate_search_list_file(generated_dir):
         ignored_files, ignored_directories = load_fsweb_dir_ini(root)
 
         html_files = [
-            f for f in files 
-            if f.endswith(".html") and not any(re.match(pattern, f) for pattern in ignored_files)
+            f
+            for f in files
+            if f.endswith(".html")
+            and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
         for html_file in html_files:
-            relative_path = os.path.relpath(os.path.join(root, html_file), generated_dir)
+            relative_path = os.path.relpath(
+                os.path.join(root, html_file), generated_dir
+            )
             file_list.append(
                 relative_path.replace("\\", "/")
             )  # Replace backslashes with forward slashes for JS compatibility
@@ -368,6 +401,7 @@ def generate_search_list_file(generated_dir):
             f.write(f'    "{file}",\n')
         f.write("];\n")
 
+
 def create_argparser_and_get_args():
     parser = argparse.ArgumentParser(
         prog="fsweb",
@@ -376,22 +410,28 @@ def create_argparser_and_get_args():
     )
 
     parser.add_argument(
-        "-s", "--source-dir",
+        "-s",
+        "--source-dir",
         help="The source directory which fsweb will recursively process, path is relative to the fsweb directory",
         required=True,
     )
     parser.add_argument(
-        "-o", "--output-dir",
-        default = "fsweb_generated_dir",
-        help="The directory that fsweb will output the modified files, path is relative to the fsweb directory"
+        "-o",
+        "--output-dir",
+        default="fsweb_generated_dir",
+        help="The directory that fsweb will output the modified files, path is relative to the fsweb directory",
     )
     parser.add_argument(
-        "-t", "--theme",
+        "-t",
+        "--theme",
         choices=["light", "dark"],
         help="Choose from 'dark' or 'light' themes",
     )
     parser.add_argument(
-        "-w", "--wrapper", action="store_true", help="Add wrapper to every index file. Pushes the content towards the middle of the screen"
+        "-w",
+        "--wrapper",
+        action="store_true",
+        help="Add wrapper to every index file. Pushes the content towards the middle of the screen",
     )
     parser.add_argument(
         "-ifm",
@@ -406,19 +446,22 @@ def create_argparser_and_get_args():
         ),
     )
     parser.add_argument(
-        "-x", "--search",
+        "-x",
+        "--search",
         action="store_true",
         help="Add search functionality initiated by ctrl-space",
     )
 
     parser.add_argument(
-        "-b", "--breadcrumb",
+        "-b",
+        "--breadcrumb",
         action="store_true",
         help="Add breadcrumb navigation to every index file",
     )
 
     parser.add_argument(
-        "-il", "--ini-layout",
+        "-il",
+        "--ini-layout",
         action="store_true",
         help="Show the layout of the fsweb_dir.ini file and exit",
     )
@@ -448,7 +491,16 @@ if __name__ == "__main__":
         use_existing_index_files = args.index_file_mode == "use"
         merge_existing_index_files = args.index_file_mode == "merge"
 
-        create_index_files(args.output_dir, theme, wrapper, search, breadcrumb, clobber_index_files, use_existing_index_files, merge_existing_index_files)
+        create_index_files(
+            args.output_dir,
+            theme,
+            wrapper,
+            search,
+            breadcrumb,
+            clobber_index_files,
+            use_existing_index_files,
+            merge_existing_index_files,
+        )
 
         if search:
             generate_search_list_file(args.output_dir)

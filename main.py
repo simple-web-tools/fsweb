@@ -14,7 +14,7 @@ SCRIPT_DIR = get_absolute_path_of_where_this_script_exists()
 def print_ini_layout():
     print(
         """
-    Layout of fsweb_dir.ini:
+    Layout of fsweb.ini:
     
     [settings]
     ignore_files = file1.html, file2.html
@@ -29,7 +29,11 @@ def print_ini_layout():
 def re_create_generated_directory(content_directory, generated_directory):
     if os.path.exists(generated_directory):
         shutil.rmtree(generated_directory)
-    shutil.copytree(content_directory, generated_directory)
+    shutil.copytree(
+        content_directory,
+        generated_directory,
+        ignore=shutil.ignore_patterns("fsweb.ini"),
+    )
 
 
 def get_end_of_path(path):
@@ -37,9 +41,9 @@ def get_end_of_path(path):
 
 
 def load_fsweb_dir_ini(dir_path: str) -> Tuple[List[str], List[str]]:
-    """Load the fsweb_dir.ini file if it exists and return lists of ignored files and directories."""
+    """Load the fsweb.ini file if it exists and return lists of ignored files and directories."""
     config = configparser.ConfigParser()
-    ini_file_path = os.path.join(dir_path, "fsweb_dir.ini")
+    ini_file_path = os.path.join(dir_path, "fsweb.ini")
 
     ignored_files = []
     ignored_directories = []
@@ -286,7 +290,7 @@ def add_text_to_header_and_body_of_html(
         print("found footer")
         insert_index = footer_index
     else:
-        print("didn't found footer")
+        print("didn't find footer")
         insert_index = html_content.find("</body>")
 
     if insert_index != -1:
@@ -474,7 +478,7 @@ def create_argparser_and_get_args():
         "-il",
         "--ini-layout",
         action="store_true",
-        help="Show the layout of the fsweb_dir.ini file and exit",
+        help="Show the layout of the fsweb.ini file and exit",
     )
 
     args = parser.parse_args()
@@ -488,7 +492,6 @@ def create_argparser_and_get_args():
 
 if __name__ == "__main__":
 
-    print("goooobing")
     args = create_argparser_and_get_args()
 
     if args.source_dir and args.output_dir:
@@ -504,7 +507,6 @@ if __name__ == "__main__":
         merge_existing_index_files = args.index_file_mode == "merge"
 
         css_file_path: Optional[str] = args.css_file_path
-        print("goobasn: ", css_file_path)
 
         create_index_files(
             args.output_dir,

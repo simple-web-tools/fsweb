@@ -1,0 +1,45 @@
+/* dark.css */
+:root {
+    --page-background: #000;
+    --page-text-color: #f4f4f5;
+    --link-color: #6ee7ff;
+    --visited-link-color: #d8b4fe;
+    --hover-link-color: #93c5fd;
+    --active-link-color: #f0abfc;
+    --modal-background: rgba(0, 0, 0, 0.8);
+    --modal-content-background: #202124;
+    --input-background: #2f3338;
+    --input-text-color: #fff;
+    --result-background: #2b2f34;
+    --result-hover-background: #3b424a;
+    --selected-background: #4b5563;
+    --border-color: #3f454c;
+}
+
+html {
+    color-scheme: dark;
+    background: var(--page-background);
+    color: var(--page-text-color);
+}
+
+body {
+    background: var(--page-background);
+    color: var(--page-text-color);
+}
+
+a {
+    color: var(--link-color);
+}
+
+a:visited {
+    color: var(--visited-link-color);
+}
+
+a:hover,
+a:focus {
+    color: var(--hover-link-color);
+}
+
+a:active {
+    color: var(--active-link-color);
+}

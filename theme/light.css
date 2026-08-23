@@ -1,0 +1,45 @@
+/* light.css */
+:root {
+    --page-background: #fff;
+    --page-text-color: #111;
+    --link-color: #0000ee;
+    --visited-link-color: #551a8b;
+    --hover-link-color: #1d4ed8;
+    --active-link-color: #ee0000;
+    --modal-background: rgba(255, 255, 255, 0.8);
+    --modal-content-background: #f4f4f5;
+    --input-background: #fff;
+    --input-text-color: #111;
+    --result-background: #f4f4f5;
+    --result-hover-background: #e5e7eb;
+    --selected-background: #d1d5db;
+    --border-color: #d1d5db;
+}
+
+html {
+    color-scheme: light;
+    background: var(--page-background);
+    color: var(--page-text-color);
+}
+
+body {
+    background: var(--page-background);
+    color: var(--page-text-color);
+}
+
+a {
+    color: var(--link-color);
+}
+
+a:visited {
+    color: var(--visited-link-color);
+}
+
+a:hover,
+a:focus {
+    color: var(--hover-link-color);
+}
+
+a:active {
+    color: var(--active-link-color);
+}

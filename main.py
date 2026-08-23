@@ -429,6 +429,21 @@ def create_file_viewer_file(output_dir: str, theme: str, search: bool) -> None:
     <meta charset="UTF-8">
     <title>file viewer</title>
     {generate_links_for_header(theme)}
+    <style>
+        .file-viewer-controls {{
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }}
+
+        .file-viewer-code {{
+            background: var(--modal-content-background, #f4f4f5);
+            border: 1px solid var(--border-color, #d1d5db);
+            padding: 1rem;
+            overflow: auto;
+        }}
+    </style>
 </head>
 <body>
     <article>
@@ -439,13 +454,13 @@ def create_file_viewer_file(output_dir: str, theme: str, search: bool) -> None:
             <header>
                 <h1 id="file-title">file viewer</h1>
             </header>
-            <p>
-                <button id="copy-button" type="button">Copy</button>
-                <a id="download-link" href="#" download>Download</a>
-                <a id="raw-link" href="#">Open raw</a>
+            <p class="file-viewer-controls">
+                <button id="copy-button" type="button">copy</button>
+                <button id="download-button" type="button">download</button>
+                <button id="raw-button" type="button">open raw</button>
             </p>
             <p id="status">Loading file...</p>
-            <pre><code id="file-contents"></code></pre>
+            <pre class="file-viewer-code"><code id="file-contents"></code></pre>
         </div>
         {body_search_content if search else ''}
     </article>
@@ -456,8 +471,8 @@ const title = document.getElementById("file-title");
 const statusElement = document.getElementById("status");
 const codeElement = document.getElementById("file-contents");
 const copyButton = document.getElementById("copy-button");
-const downloadLink = document.getElementById("download-link");
-const rawLink = document.getElementById("raw-link");
+const downloadButton = document.getElementById("download-button");
+const rawButton = document.getElementById("raw-button");
 let fileText = "";
 
 function fileNameFromPath(filePath) {{
@@ -486,17 +501,36 @@ copyButton.addEventListener("click", async function() {{
     statusElement.textContent = "Copied.";
 }});
 
+downloadButton.addEventListener("click", function() {{
+    if (!path) {{
+        return;
+    }}
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = path;
+    downloadLink.download = fileNameFromPath(path);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+}});
+
+rawButton.addEventListener("click", function() {{
+    if (path) {{
+        window.location.href = path;
+    }}
+}});
+
 async function loadFile() {{
     if (!path) {{
         title.textContent = "missing file path";
         statusElement.textContent = "No file path was provided.";
         copyButton.disabled = true;
+        downloadButton.disabled = true;
+        rawButton.disabled = true;
         return;
     }}
 
     title.textContent = fileNameFromPath(path);
-    downloadLink.href = path;
-    rawLink.href = path;
 
     try {{
         const response = await fetch(path);
@@ -506,11 +540,12 @@ async function loadFile() {{
 
         fileText = await response.text();
         codeElement.textContent = fileText;
-        downloadLink.download = fileNameFromPath(path);
         statusElement.textContent = path;
     }} catch (error) {{
         statusElement.textContent = "Could not load " + path + ": " + error.message;
         copyButton.disabled = true;
+        downloadButton.disabled = true;
+        rawButton.disabled = true;
     }}
 }}
 

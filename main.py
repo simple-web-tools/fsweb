@@ -5,10 +5,44 @@ import re
 from os import walk
 from typing import List, Tuple, Optional
 import configparser
+from urllib.parse import quote
 from html_utils.main import extract_body_content, extract_header_content
 from fs_utils.main import get_absolute_path_of_where_this_script_exists
 
 SCRIPT_DIR = get_absolute_path_of_where_this_script_exists()
+
+TEXT_FILE_EXTENSIONS = {
+    ".bat",
+    ".c",
+    ".cc",
+    ".cfg",
+    ".cmake",
+    ".conf",
+    ".cpp",
+    ".cs",
+    ".css",
+    ".csv",
+    ".frag",
+    ".glsl",
+    ".h",
+    ".hpp",
+    ".html",
+    ".ini",
+    ".jai",
+    ".js",
+    ".json",
+    ".lua",
+    ".md",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".txt",
+    ".vert",
+    ".vim",
+    ".xml",
+    ".yml",
+    ".yaml",
+}
 
 
 def print_ini_layout():
@@ -95,6 +129,14 @@ def create_list_of_links_for_each_html_file(files: List[str]) -> str:
     """
 
 
+def is_text_file(file_path: str) -> bool:
+    return os.path.splitext(file_path.lower())[1] in TEXT_FILE_EXTENSIONS
+
+
+def to_url_path(path: str) -> str:
+    return path.replace("\\", "/")
+
+
 body_search_content = """
 <div id="searchModal" class="modal">
    <div class="modal-content">
@@ -146,11 +188,90 @@ def strip_output_dir(dir_path: str, output_dir: str) -> str:
     return dir_path
 
 
-def create_list_of_links_for_each_non_html_file(files: List[str]) -> str:
+def create_file_viewer_href(output_dir: str, curr_output_dir_path: str, file: str) -> str:
+    relative_dir = strip_output_dir(curr_output_dir_path, output_dir)
+    file_path = to_url_path(os.path.join(relative_dir, file))
+    return f"/file_viewer.html?path={quote('/' + file_path)}"
+
+
+def should_skip_file_viewer_rewrite(href: str) -> bool:
+    return (
+        href.startswith("#")
+        or href.startswith("http://")
+        or href.startswith("https://")
+        or href.startswith("mailto:")
+        or href.startswith("javascript:")
+        or "file_viewer.html" in href
+    )
+
+
+def split_href_path(href: str) -> Tuple[str, str]:
+    split_at = len(href)
+    for separator in ["?", "#"]:
+        separator_index = href.find(separator)
+        if separator_index != -1:
+            split_at = min(split_at, separator_index)
+    return href[:split_at], href[split_at:]
+
+
+def create_file_viewer_href_for_html_link(
+    output_dir: str, curr_output_dir_path: str, href: str
+) -> str:
+    href_path, _ = split_href_path(href)
+    if href_path.startswith("/"):
+        file_path = href_path
+    else:
+        absolute_file_path = os.path.normpath(os.path.join(curr_output_dir_path, href_path))
+        relative_file_path = os.path.relpath(absolute_file_path, output_dir)
+        file_path = "/" + to_url_path(relative_file_path)
+
+    return f"/file_viewer.html?path={quote(file_path)}"
+
+
+def rewrite_text_file_links_in_html(
+    output_dir: str, curr_output_dir_path: str, html_file_path: str
+) -> None:
+    with open(html_file_path, "r", encoding="utf-8") as file:
+        html_content = file.read()
+
+    def rewrite_anchor_tag(match):
+        anchor_tag = match.group(0)
+        href_match = re.search(r"href=(['\"])([^'\"]+)\1", anchor_tag)
+        if not href_match:
+            return anchor_tag
+
+        full_href_attribute = href_match.group(0)
+        quote_char = href_match.group(1)
+        href = href_match.group(2)
+        href_path, _ = split_href_path(href)
+
+        if should_skip_file_viewer_rewrite(href) or href_path.endswith(".html"):
+            return anchor_tag
+        if not is_text_file(href_path):
+            return anchor_tag
+
+        rewritten_href = create_file_viewer_href_for_html_link(
+            output_dir, curr_output_dir_path, href
+        )
+        rewritten_href_attribute = f"href={quote_char}{rewritten_href}{quote_char}"
+        return anchor_tag.replace(full_href_attribute, rewritten_href_attribute, 1)
+
+    html_content = re.sub(r"<a\b[^>]*>", rewrite_anchor_tag, html_content)
+
+    with open(html_file_path, "w", encoding="utf-8") as file:
+        file.write(html_content)
+
+
+def create_list_of_links_for_each_non_html_file(
+    output_dir: str, curr_output_dir_path: str, files: List[str]
+) -> str:
     """Create HTML links for non-HTML files."""
     inner = ""
     for file in files:
-        inner += f"\t\t<li><a href='{file}'>{file}</a></li>\n"
+        href = create_file_viewer_href(output_dir, curr_output_dir_path, file)
+        if not is_text_file(file):
+            href = file
+        inner += f"\t\t<li><a href='{href}'>{file}</a></li>\n"
 
     inner = inner[:-1]  # remove ending new line
 
@@ -211,7 +332,7 @@ def create_index_file(
 
     non_html_file_content = (
         f"""	<h2>other files</h2>
-{create_list_of_links_for_each_non_html_file(non_html_files)}"""
+{create_list_of_links_for_each_non_html_file(output_dir, curr_output_dir_path, non_html_files)}"""
         if non_html_files
         else ""
     )
@@ -300,6 +421,108 @@ def add_text_to_header_and_body_of_html(
         file.write(html_content)
 
 
+def create_file_viewer_file(output_dir: str, theme: str, search: bool) -> None:
+    file_viewer_path = os.path.join(output_dir, "file_viewer.html")
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>file viewer</title>
+    {generate_links_for_header(theme)}
+</head>
+<body>
+    <article>
+        <div style="width: 70%; margin: 0 auto;">
+            <nav class="breadcrumb">
+                <a href="/index.html">~</a>
+            </nav>
+            <header>
+                <h1 id="file-title">file viewer</h1>
+            </header>
+            <p>
+                <button id="copy-button" type="button">Copy</button>
+                <a id="download-link" href="#" download>Download</a>
+                <a id="raw-link" href="#">Open raw</a>
+            </p>
+            <p id="status">Loading file...</p>
+            <pre><code id="file-contents"></code></pre>
+        </div>
+        {body_search_content if search else ''}
+    </article>
+    <script>
+const params = new URLSearchParams(window.location.search);
+const path = params.get("path");
+const title = document.getElementById("file-title");
+const statusElement = document.getElementById("status");
+const codeElement = document.getElementById("file-contents");
+const copyButton = document.getElementById("copy-button");
+const downloadLink = document.getElementById("download-link");
+const rawLink = document.getElementById("raw-link");
+let fileText = "";
+
+function fileNameFromPath(filePath) {{
+    return filePath.substring(filePath.lastIndexOf("/") + 1) || "file";
+}}
+
+async function copyText(text) {{
+    if (navigator.clipboard && window.isSecureContext) {{
+        await navigator.clipboard.writeText(text);
+        return;
+    }}
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+}}
+
+copyButton.addEventListener("click", async function() {{
+    await copyText(fileText);
+    statusElement.textContent = "Copied.";
+}});
+
+async function loadFile() {{
+    if (!path) {{
+        title.textContent = "missing file path";
+        statusElement.textContent = "No file path was provided.";
+        copyButton.disabled = true;
+        return;
+    }}
+
+    title.textContent = fileNameFromPath(path);
+    downloadLink.href = path;
+    rawLink.href = path;
+
+    try {{
+        const response = await fetch(path);
+        if (!response.ok) {{
+            throw new Error("HTTP " + response.status);
+        }}
+
+        fileText = await response.text();
+        codeElement.textContent = fileText;
+        downloadLink.download = fileNameFromPath(path);
+        statusElement.textContent = path;
+    }} catch (error) {{
+        statusElement.textContent = "Could not load " + path + ": " + error.message;
+        copyButton.disabled = true;
+    }}
+}}
+
+loadFile();
+    </script>
+</body>
+</html>
+"""
+    with open(file_viewer_path, "w", encoding="utf-8") as file:
+        file.write(html)
+
+
 def create_index_files(
     output_dir: str,
     theme: str,
@@ -316,6 +539,8 @@ def create_index_files(
         shutil.copytree(SCRIPT_DIR + "/search", output_dir + "/search")
     if theme in ["dark", "light"]:
         shutil.copytree(SCRIPT_DIR + "/theme", output_dir + "/theme")
+
+    create_file_viewer_file(output_dir, theme, search)
 
     first_iteration = True
     for output_dir_path, sub_dir_names, file_names in walk(output_dir):
@@ -335,6 +560,7 @@ def create_index_files(
             f
             for f in file_names
             if f.endswith(".html")
+            and f != "file_viewer.html"
             and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
 
@@ -344,6 +570,10 @@ def create_index_files(
             if not f.endswith(".html")
             and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
+
+        for html_file in html_files:
+            html_file_path = os.path.join(output_dir_path, html_file)
+            rewrite_text_file_links_in_html(output_dir, output_dir_path, html_file_path)
 
         if search:
             print("~~~> Modifying html files to include search functionality")
@@ -391,11 +621,20 @@ def generate_search_list_file(generated_dir):
     for root, dirs, files in os.walk(generated_dir):
 
         ignored_files, ignored_directories = load_fsweb_dir_ini(root)
+        if root == generated_dir:
+            ignored_directories.extend(["search", "theme"])
+
+        dirs[:] = [
+            d
+            for d in dirs
+            if not any(re.match(pattern, d) for pattern in ignored_directories)
+        ]
 
         html_files = [
             f
             for f in files
             if f.endswith(".html")
+            and f != "file_viewer.html"
             and not any(re.match(pattern, f) for pattern in ignored_files)
         ]
         for html_file in html_files:
@@ -405,6 +644,19 @@ def generate_search_list_file(generated_dir):
             file_list.append(
                 relative_path.replace("\\", "/")
             )  # Replace backslashes with forward slashes for JS compatibility
+
+        text_files = [
+            f
+            for f in files
+            if not f.endswith(".html")
+            and is_text_file(f)
+            and not any(re.match(pattern, f) for pattern in ignored_files)
+        ]
+        for text_file in text_files:
+            relative_path = os.path.relpath(
+                os.path.join(root, text_file), generated_dir
+            )
+            file_list.append(to_url_path(relative_path))
 
     with open(generated_dir + "/search/search_list.js", "w") as f:
         f.write("const search_list = [\n")

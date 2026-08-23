@@ -44,12 +44,15 @@ def load_fsweb_dir_ini(dir_path: str) -> Tuple[List[str], List[str]]:
     """Load the fsweb.ini file if it exists and return lists of ignored files and directories."""
     config = configparser.ConfigParser()
     ini_file_path = os.path.join(dir_path, "fsweb.ini")
+    legacy_ini_file_path = os.path.join(dir_path, "fsweb_dir.ini")
 
     ignored_files = []
     ignored_directories = []
 
-    if os.path.exists(ini_file_path):
-        config.read(ini_file_path)
+    config_path = ini_file_path if os.path.exists(ini_file_path) else legacy_ini_file_path
+
+    if os.path.exists(config_path):
+        config.read(config_path)
 
         if "settings" in config:
             ignored_files = [
@@ -110,11 +113,7 @@ body_search_content = """
 
 def generate_links_for_header(theme: str) -> str:
     return f"""
-   {'<link id="theme-stylesheet" rel="stylesheet" href="/search/dark_theme.css">' 
-        if theme == 'dark' and search else ''}
-
-   {'<link id="theme-stylesheet" rel="stylesheet" href="/search/dark_theme.css">' 
-        if theme == 'light' and search else ''}
+   <link id="theme-stylesheet" rel="stylesheet" href="/theme/{theme}.css">
 
     {'<link rel="stylesheet" href="/search/search.css">' if search else ''}
     """
@@ -219,8 +218,7 @@ def create_index_file(
 
     header_content = f"""
     <title>{dir_name}</title>
-    {"" if theme == 'light' else "<style>body { background-color:black; color: white; }</style>"}
-    {generate_links_for_header(theme) if search else ''}
+    {generate_links_for_header(theme)}
     {f'<link rel="stylesheet" href="{css_file_path}">' if css_file_path else ""}
             
 """
@@ -316,12 +314,16 @@ def create_index_files(
 
     if search:
         shutil.copytree(SCRIPT_DIR + "/search", output_dir + "/search")
+    if theme in ["dark", "light"]:
+        shutil.copytree(SCRIPT_DIR + "/theme", output_dir + "/theme")
 
     first_iteration = True
     for output_dir_path, sub_dir_names, file_names in walk(output_dir):
         print(f"\n==== Starting work on {output_dir_path} ====")
 
         ignored_files, ignored_directories = load_fsweb_dir_ini(output_dir_path)
+        if output_dir_path == output_dir:
+            ignored_directories.extend(["search", "theme"])
 
         sub_dir_names[:] = [
             d
